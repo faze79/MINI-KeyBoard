@@ -69,4 +69,6 @@ Pre-compiled binaries are available in the `Release/` folder.
 
 ## License
 
+This project is licensed under the [MIT License](LICENSE).
+
 This project contains decompiled source code for educational and interoperability purposes.
