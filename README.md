@@ -30,7 +30,7 @@ These devices are commonly sold on AliExpress, Amazon, and other marketplaces un
 
 - **Maximum 6 characters per key** (firmware limitation)
 - Modifier keys (Shift, Ctrl, Alt) count toward the character limit
-- Example: "Shift+S+a+l+v+a" = 6 slots used
+- Example: "Shift+E+x+a+m+p" = 6 slots used (types "Exampl")
 
 ## Requirements
 
