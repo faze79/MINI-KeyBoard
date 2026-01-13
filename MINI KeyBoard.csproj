@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--Project was exported from assembly: C:\Users\davide.fasolo\OneDrive - Salvagnini Italia SpA\Documents\MINI-KEYBOARD\MINI KeyBoard.exe-->
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D839C0B5-A02E-4CA6-B384-89379343AE23}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>MINI KeyBoard</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
+    <ApplicationVersion>1.0.0.0</ApplicationVersion>
+    <FileAlignment>512</FileAlignment>
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="HidLibrary">
+      <HintPath>lib\HidLibrary.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="HID\report.cs" />
+    <Compile Include="HID\Hid.cs" />
+    <Compile Include="HID\SP_DEVICE_INTERFACE_DATA.cs" />
+    <Compile Include="HID\SP_DEVICE_INTERFACE_DETAIL_DATA.cs" />
+    <Compile Include="HID\SP_DEVINFO_DATA.cs" />
+    <Compile Include="HID\DIGCF.cs" />
+    <Compile Include="HID\HIDD_ATTRIBUTES.cs" />
+    <Compile Include="HID\HIDP_CAPS.cs" />
+    <Compile Include="HID\DESIREDACCESS.cs" />
+    <Compile Include="HID\CREATIONDISPOSITION.cs" />
+    <Compile Include="HID\FLAGSANDATTRIBUTES.cs" />
+    <Compile Include="HID\DEV_BROADCAST_HDR.cs" />
+    <Compile Include="HID\DEV_BROADCAST_DEVICEINTERFACE.cs" />
+    <Compile Include="HIDTester\AutoSizeFormClass.cs" />
+    <Compile Include="HIDTester\FormMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="HIDTester\HidLib.cs" />
+    <Compile Include="HIDTester\LayerFun.cs" />
+    <Compile Include="HIDTester\LEDkey.cs" />
+    <Compile Include="HIDTester\MouseKey.cs" />
+    <Compile Include="HIDTester\Program.cs" />
+    <Compile Include="HIDTester\BasicKeys.cs" />
+    <Compile Include="HIDTester\FunKey.cs" />
+    <Compile Include="HIDTester\MULKey.cs" />
+    <Compile Include="HIDTester\Properties\Resources.cs" />
+    <Compile Include="HIDTester\Properties\Settings.cs" />
+    <Compile Include="AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="HIDTester\BasicKeys.resx" />
+    <EmbeddedResource Include="HIDTester\FormMain.resx" />
+    <EmbeddedResource Include="HIDTester\FunKey.resx" />
+    <EmbeddedResource Include="HIDTester\LayerFun.resx" />
+    <EmbeddedResource Include="HIDTester\LEDkey.resx" />
+    <EmbeddedResource Include="HIDTester\MouseKey.resx" />
+    <EmbeddedResource Include="HIDTester\MULKey.resx" />
+    <EmbeddedResource Include="HIDTester\Properties\Resources.resx" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

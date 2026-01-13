@@ -1,0 +1,22 @@
+// Decompiled with JetBrains decompiler
+// Type: HID.FLAGSANDATTRIBUTES
+// Assembly: MINI KeyBoard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+// MVID: 830E3432-592A-4FE8-A60E-4E46348E689C
+// Assembly location: C:\Users\davide.fasolo\OneDrive - Salvagnini Italia SpA\Documents\MINI-KEYBOARD\MINI KeyBoard.exe
+
+namespace HID;
+
+internal static class FLAGSANDATTRIBUTES
+{
+  public const uint FILE_FLAG_WRITE_THROUGH = 2147483648 /*0x80000000*/;
+  public const uint FILE_FLAG_OVERLAPPED = 1073741824 /*0x40000000*/;
+  public const uint FILE_FLAG_NO_BUFFERING = 536870912 /*0x20000000*/;
+  public const uint FILE_FLAG_RANDOM_ACCESS = 268435456 /*0x10000000*/;
+  public const uint FILE_FLAG_SEQUENTIAL_SCAN = 134217728 /*0x08000000*/;
+  public const uint FILE_FLAG_DELETE_ON_CLOSE = 67108864 /*0x04000000*/;
+  public const uint FILE_FLAG_BACKUP_SEMANTICS = 33554432 /*0x02000000*/;
+  public const uint FILE_FLAG_POSIX_SEMANTICS = 16777216 /*0x01000000*/;
+  public const uint FILE_FLAG_OPEN_REPARSE_POINT = 2097152 /*0x200000*/;
+  public const uint FILE_FLAG_OPEN_NO_RECALL = 1048576 /*0x100000*/;
+  public const uint FILE_FLAG_FIRST_PIPE_INSTANCE = 524288 /*0x080000*/;
+}

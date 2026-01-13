@@ -1,0 +1,23 @@
+# Build results
+bin/
+obj/
+*.pdb
+*.exe
+*.dll
+!lib/*.dll
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+nul
+
+# Claude Code
+.claude/
