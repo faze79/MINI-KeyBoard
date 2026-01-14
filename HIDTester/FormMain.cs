@@ -1,9 +1,3 @@
-// Decompiled with JetBrains decompiler
-// Type: HIDTester.FormMain
-// Assembly: MINI KeyBoard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-// MVID: 830E3432-592A-4FE8-A60E-4E46348E689C
-// Assembly location: C:\Users\davide.fasolo\OneDrive - Salvagnini Italia SpA\Documents\MINI-KEYBOARD\MINI KeyBoard.exe
-
 using HID;
 using System;
 using System.Collections.Generic;
@@ -38,13 +32,14 @@ public class FormMain : Form
   private readonly Color keyHoverColor = Color.FromArgb(80, 80, 85);
   private readonly Color textColor = Color.FromArgb(241, 241, 241);
   private readonly Color panelBackColor = Color.FromArgb(37, 37, 38);
-  private readonly string[] menuStr = new string[6]
+  private readonly string[] menuStr = new string[7]
   {
     "KEY",
     "Ctrl Shift Alt",
     "Multimedia",
     "LED",
     "Mouse",
+    "Layer Switch",
     ""
   };
   private Dictionary<string, Form> menuDic = new Dictionary<string, Form>();
@@ -89,10 +84,19 @@ public class FormMain : Form
   // String splitter controls
   private TextBox txtStringInput;
   private Label lblKeysRequired;
+  private Label lblLayerInfo;
   private Button btnApplyString;
   private NumericUpDown numCharsPerKey;
+  private NumericUpDown numAvailableKeys;
+  private CheckBox chkUseMultiLayer;
   private int charsPerKey = 5; // Firmware only stores 5 chars per key (indices 1-5)
-  private int availableKeys = 3; // Default, updated when device connects
+  private int availableKeys = 3; // Default, can be changed by user
+
+  // Layer indicator
+  private Label lblLayerIndicator;
+  private readonly Color layer1Color = Color.FromArgb(0, 122, 204);   // Blue
+  private readonly Color layer2Color = Color.FromArgb(16, 124, 16);   // Green
+  private readonly Color layer3Color = Color.FromArgb(194, 59, 34);   // Red
 
   public FormMain()
   {
@@ -168,6 +172,9 @@ public class FormMain : Form
 
     // Create device info button
     CreateDeviceInfoButton();
+
+    // Create layer indicator
+    CreateLayerIndicator();
   }
 
   private Button btnDeviceInfo;
@@ -179,7 +186,7 @@ public class FormMain : Form
   {
     this.btnDeviceInfo = new Button();
     this.btnDeviceInfo.Text = "Device Info";
-    this.btnDeviceInfo.Location = new Point(980, 205);
+    this.btnDeviceInfo.Location = new Point(980, 400);
     this.btnDeviceInfo.Size = new Size(120, 30);
     this.btnDeviceInfo.FlatStyle = FlatStyle.Flat;
     this.btnDeviceInfo.FlatAppearance.BorderColor = Color.FromArgb(70, 70, 75);
@@ -192,7 +199,7 @@ public class FormMain : Form
 
     this.btnHidDebug = new Button();
     this.btnHidDebug.Text = "HID Debug";
-    this.btnHidDebug.Location = new Point(1110, 205);
+    this.btnHidDebug.Location = new Point(1110, 400);
     this.btnHidDebug.Size = new Size(120, 30);
     this.btnHidDebug.FlatStyle = FlatStyle.Flat;
     this.btnHidDebug.FlatAppearance.BorderColor = Color.FromArgb(70, 70, 75);
@@ -202,6 +209,48 @@ public class FormMain : Form
     this.btnHidDebug.Click += BtnHidDebug_Click;
     this.Controls.Add(this.btnHidDebug);
     this.btnHidDebug.BringToFront();
+  }
+
+  private void CreateLayerIndicator()
+  {
+    // Create a prominent layer indicator
+    this.lblLayerIndicator = new Label();
+    this.lblLayerIndicator.Text = "LAYER 1";
+    this.lblLayerIndicator.Location = new Point(980, 440);
+    this.lblLayerIndicator.Size = new Size(250, 40);
+    this.lblLayerIndicator.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
+    this.lblLayerIndicator.ForeColor = Color.White;
+    this.lblLayerIndicator.BackColor = this.layer1Color;
+    this.lblLayerIndicator.TextAlign = ContentAlignment.MiddleCenter;
+    this.lblLayerIndicator.BorderStyle = BorderStyle.None;
+    this.Controls.Add(this.lblLayerIndicator);
+    this.lblLayerIndicator.BringToFront();
+  }
+
+  private void UpdateLayerIndicator()
+  {
+    if (this.lblLayerIndicator == null) return;
+
+    byte layer = FormMain.KeyParam.KEY_Cur_Layer;
+    if (layer == 0) layer = 1;
+
+    this.lblLayerIndicator.Text = $"LAYER {layer}";
+
+    switch (layer)
+    {
+      case 1:
+        this.lblLayerIndicator.BackColor = this.layer1Color;
+        break;
+      case 2:
+        this.lblLayerIndicator.BackColor = this.layer2Color;
+        break;
+      case 3:
+        this.lblLayerIndicator.BackColor = this.layer3Color;
+        break;
+      default:
+        this.lblLayerIndicator.BackColor = this.layer1Color;
+        break;
+    }
   }
 
   public static void LogHidWrite(byte reportId, byte[] data, string context = "")
@@ -481,41 +530,66 @@ public class FormMain : Form
     grpStringSplitter.ForeColor = this.textColor;
     grpStringSplitter.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
     grpStringSplitter.Location = new Point(980, 10);
-    grpStringSplitter.Size = new Size(250, 185);
+    grpStringSplitter.Size = new Size(320, 380);
     grpStringSplitter.BackColor = Color.FromArgb(45, 45, 48);
     this.Controls.Add(grpStringSplitter);
 
-    // TextBox for string input
+    int yPos = 25;
+    int lineHeight = 30;
+
+    // Row 1: TextBox for string input
     this.txtStringInput = new TextBox();
-    this.txtStringInput.Location = new Point(10, 25);
-    this.txtStringInput.Size = new Size(220, 25);
-    this.txtStringInput.MaxLength = this.charsPerKey * 16; // Max 16 keys
+    this.txtStringInput.Location = new Point(10, yPos);
+    this.txtStringInput.Size = new Size(295, 25);
+    this.txtStringInput.MaxLength = this.charsPerKey * 16 * 3; // Max across 3 layers
     StyleTextBox(this.txtStringInput);
     this.txtStringInput.TextChanged += TxtStringInput_TextChanged;
     grpStringSplitter.Controls.Add(this.txtStringInput);
+    yPos += lineHeight;
 
-    // Label showing keys required
+    // Row 2: Label showing keys required
     this.lblKeysRequired = new Label();
-    this.lblKeysRequired.Text = "Keys: 0 / 16";
+    this.lblKeysRequired.Text = "Status: Keys 0 / 3";
     this.lblKeysRequired.ForeColor = this.textColor;
     this.lblKeysRequired.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
-    this.lblKeysRequired.Location = new Point(10, 55);
+    this.lblKeysRequired.Location = new Point(10, yPos + 3);
     this.lblKeysRequired.AutoSize = true;
     grpStringSplitter.Controls.Add(this.lblKeysRequired);
+    yPos += lineHeight;
 
-    // Chars per key label
+    // Row 3: Available keys
+    Label lblKeysLabel = new Label();
+    lblKeysLabel.Text = "Available Keys:";
+    lblKeysLabel.ForeColor = Color.FromArgb(200, 200, 200);
+    lblKeysLabel.Font = new Font("Segoe UI", 9F);
+    lblKeysLabel.Location = new Point(10, yPos + 3);
+    lblKeysLabel.AutoSize = true;
+    grpStringSplitter.Controls.Add(lblKeysLabel);
+
+    this.numAvailableKeys = new NumericUpDown();
+    this.numAvailableKeys.Location = new Point(120, yPos);
+    this.numAvailableKeys.Size = new Size(60, 25);
+    this.numAvailableKeys.Minimum = 1;
+    this.numAvailableKeys.Maximum = 16;
+    this.numAvailableKeys.Value = this.availableKeys;
+    this.numAvailableKeys.BackColor = Color.FromArgb(60, 60, 65);
+    this.numAvailableKeys.ForeColor = this.textColor;
+    this.numAvailableKeys.ValueChanged += NumAvailableKeys_ValueChanged;
+    grpStringSplitter.Controls.Add(this.numAvailableKeys);
+    yPos += lineHeight;
+
+    // Row 4: Chars per key
     Label lblCharsPerKey = new Label();
-    lblCharsPerKey.Text = "Chars/key:";
-    lblCharsPerKey.ForeColor = Color.FromArgb(160, 160, 160);
-    lblCharsPerKey.Font = new Font("Segoe UI", 8F);
-    lblCharsPerKey.Location = new Point(120, 57);
+    lblCharsPerKey.Text = "Chars per Key:";
+    lblCharsPerKey.ForeColor = Color.FromArgb(200, 200, 200);
+    lblCharsPerKey.Font = new Font("Segoe UI", 9F);
+    lblCharsPerKey.Location = new Point(10, yPos + 3);
     lblCharsPerKey.AutoSize = true;
     grpStringSplitter.Controls.Add(lblCharsPerKey);
 
-    // Chars per key numeric selector
     this.numCharsPerKey = new NumericUpDown();
-    this.numCharsPerKey.Location = new Point(185, 53);
-    this.numCharsPerKey.Size = new Size(50, 23);
+    this.numCharsPerKey.Location = new Point(120, yPos);
+    this.numCharsPerKey.Size = new Size(60, 25);
     this.numCharsPerKey.Minimum = 1;
     this.numCharsPerKey.Maximum = 30;
     this.numCharsPerKey.Value = this.charsPerKey;
@@ -523,27 +597,47 @@ public class FormMain : Form
     this.numCharsPerKey.ForeColor = this.textColor;
     this.numCharsPerKey.ValueChanged += NumCharsPerKey_ValueChanged;
     grpStringSplitter.Controls.Add(this.numCharsPerKey);
+    yPos += lineHeight;
 
-    // Apply and Download button
+    // Row 5: Multi-layer checkbox
+    this.chkUseMultiLayer = new CheckBox();
+    this.chkUseMultiLayer.Text = "Auto multi-layer (use layers for long strings)";
+    this.chkUseMultiLayer.ForeColor = Color.FromArgb(255, 200, 100);
+    this.chkUseMultiLayer.Font = new Font("Segoe UI", 9F);
+    this.chkUseMultiLayer.Location = new Point(10, yPos);
+    this.chkUseMultiLayer.AutoSize = true;
+    this.chkUseMultiLayer.Checked = true;
+    this.chkUseMultiLayer.CheckedChanged += (s, e) => UpdateKeysRequiredLabel();
+    grpStringSplitter.Controls.Add(this.chkUseMultiLayer);
+    yPos += lineHeight;
+
+    // Row 6: Apply and Download button
     this.btnApplyString = new Button();
     this.btnApplyString.Text = "Apply && Download";
-    this.btnApplyString.Location = new Point(10, 85);
-    this.btnApplyString.Size = new Size(140, 30);
+    this.btnApplyString.Location = new Point(10, yPos);
+    this.btnApplyString.Size = new Size(295, 32);
     StyleActionButton(this.btnApplyString);
     this.btnApplyString.Click += BtnApplyString_Click;
     grpStringSplitter.Controls.Add(this.btnApplyString);
+    yPos += 40;
 
-    // Help label
-    Label lblHelp = new Label();
-    lblHelp.Text = "Firmware limit: 5 chars/key.\nThe 6th char is ignored by\ndevice storage.";
-    lblHelp.ForeColor = Color.FromArgb(255, 180, 100);
-    lblHelp.Font = new Font("Segoe UI", 7.5F);
-    lblHelp.Location = new Point(10, 120);
-    lblHelp.AutoSize = true;
-    grpStringSplitter.Controls.Add(lblHelp);
+    // Row 7+: Layer info label (shows how layers will be used)
+    this.lblLayerInfo = new Label();
+    this.lblLayerInfo.Text = "";
+    this.lblLayerInfo.ForeColor = Color.FromArgb(255, 200, 100);
+    this.lblLayerInfo.Font = new Font("Segoe UI", 9F);
+    this.lblLayerInfo.Location = new Point(10, yPos);
+    this.lblLayerInfo.Size = new Size(295, 120);
+    grpStringSplitter.Controls.Add(this.lblLayerInfo);
 
     // Bring GroupBox to front
     grpStringSplitter.BringToFront();
+  }
+
+  private void NumAvailableKeys_ValueChanged(object sender, EventArgs e)
+  {
+    this.availableKeys = (int)this.numAvailableKeys.Value;
+    UpdateKeysRequiredLabel();
   }
 
   private void NumCharsPerKey_ValueChanged(object sender, EventArgs e)
@@ -563,28 +657,86 @@ public class FormMain : Form
     int keysNeeded = (int)Math.Ceiling((double)text.Length / this.charsPerKey);
     if (keysNeeded == 0 && text.Length > 0) keysNeeded = 1;
 
-    // Update max length based on available keys
+    bool useMultiLayer = this.chkUseMultiLayer?.Checked ?? false;
+    int dataKeys = this.availableKeys - 1; // Last key reserved for layer toggle
+    int singleLayerCapacity = this.availableKeys * this.charsPerKey;
+    int multiLayerCapacity = dataKeys * this.charsPerKey * 3; // 3 layers
+
+    // Update max length based on mode
     if (this.txtStringInput != null)
     {
-      this.txtStringInput.MaxLength = this.charsPerKey * this.availableKeys;
+      this.txtStringInput.MaxLength = useMultiLayer ? multiLayerCapacity : singleLayerCapacity;
+    }
+
+    // Calculate layer distribution
+    int layersNeeded = 1;
+    string layerInfoText = "";
+
+    if (useMultiLayer && text.Length > singleLayerCapacity)
+    {
+      // Calculate how many layers we need (only when exceeding single layer)
+      int charsPerLayer = dataKeys * this.charsPerKey;
+      layersNeeded = (int)Math.Ceiling((double)text.Length / charsPerLayer);
+      if (layersNeeded > 3) layersNeeded = 3;
+
+      if (layersNeeded >= 1)
+      {
+        // Build layer info string
+        layerInfoText = $"Using {layersNeeded} layer(s), Key {this.availableKeys} = Toggle\n";
+        int remaining = text.Length;
+        int pos = 0;
+
+        for (int layer = 1; layer <= layersNeeded && remaining > 0; layer++)
+        {
+          string layerDetail = $"L{layer}: ";
+          for (int key = 1; key <= dataKeys && remaining > 0; key++)
+          {
+            int chunkLen = Math.Min(this.charsPerKey, remaining);
+            string chunk = text.Substring(pos, chunkLen);
+            layerDetail += $"K{key}=\"{chunk}\" ";
+            pos += chunkLen;
+            remaining -= chunkLen;
+          }
+          layerInfoText += layerDetail.TrimEnd() + "\n";
+        }
+      }
     }
 
     // Update label with color coding
     if (this.lblKeysRequired != null)
     {
-      this.lblKeysRequired.Text = $"Keys: {keysNeeded} / {this.availableKeys}";
-      if (keysNeeded > this.availableKeys)
+      bool fitsInSingleLayer = text.Length <= singleLayerCapacity;
+      bool fitsWithMultiLayer = useMultiLayer && text.Length <= multiLayerCapacity;
+      // Only show multi-layer mode when string exceeds single layer capacity
+      bool needsMultiLayer = !fitsInSingleLayer && fitsWithMultiLayer;
+
+      if (needsMultiLayer)
       {
-        this.lblKeysRequired.ForeColor = Color.Red;
-      }
-      else if (keysNeeded > 0)
-      {
-        this.lblKeysRequired.ForeColor = Color.LightGreen;
+        this.lblKeysRequired.Text = $"Layers: {layersNeeded} (multi-layer mode)";
+        this.lblKeysRequired.ForeColor = Color.FromArgb(255, 200, 100); // Yellow
       }
       else
       {
-        this.lblKeysRequired.ForeColor = this.textColor;
+        this.lblKeysRequired.Text = $"Keys: {keysNeeded} / {this.availableKeys}";
+        if (!fitsInSingleLayer && !fitsWithMultiLayer)
+        {
+          this.lblKeysRequired.ForeColor = Color.Red;
+        }
+        else if (keysNeeded > 0)
+        {
+          this.lblKeysRequired.ForeColor = Color.LightGreen;
+        }
+        else
+        {
+          this.lblKeysRequired.ForeColor = this.textColor;
+        }
       }
+    }
+
+    // Update layer info label
+    if (this.lblLayerInfo != null)
+    {
+      this.lblLayerInfo.Text = layerInfoText;
     }
   }
 
@@ -603,31 +755,191 @@ public class FormMain : Form
       return;
     }
 
+    bool useMultiLayer = this.chkUseMultiLayer?.Checked ?? false;
+    int dataKeys = this.availableKeys - 1; // Last key for toggle
+    int singleLayerCapacity = this.availableKeys * this.charsPerKey;
+    int multiLayerCapacity = dataKeys * this.charsPerKey * 3;
+
     int keysNeeded = (int)Math.Ceiling((double)text.Length / this.charsPerKey);
-    if (keysNeeded > this.availableKeys)
+    // Only use multi-layer if string CANNOT fit in single layer (prefer single layer when possible)
+    bool needsMultiLayer = text.Length > singleLayerCapacity && useMultiLayer;
+
+    // Validate capacity
+    if (!needsMultiLayer && keysNeeded > this.availableKeys)
     {
-      MessageBox.Show($"String too long. Maximum {this.availableKeys * this.charsPerKey} characters ({this.availableKeys} keys).",
+      MessageBox.Show($"String too long. Maximum {singleLayerCapacity} characters ({this.availableKeys} keys).\n\nEnable 'Auto multi-layer' to support longer strings.",
+        "String Too Long", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+      return;
+    }
+
+    if (needsMultiLayer && text.Length > multiLayerCapacity)
+    {
+      MessageBox.Show($"String too long even for multi-layer mode.\nMaximum {multiLayerCapacity} characters ({dataKeys} keys x 3 layers).",
         "String Too Long", MessageBoxButtons.OK, MessageBoxIcon.Warning);
       return;
     }
 
     int successCount = 0;
-    for (int i = 0; i < keysNeeded; i++)
+    int layersUsed = 1;
+
+    if (needsMultiLayer)
     {
-      int startIndex = i * this.charsPerKey;
-      int length = Math.Min(this.charsPerKey, text.Length - startIndex);
-      string chunk = text.Substring(startIndex, length);
+      // Multi-layer mode
+      int charsPerLayer = dataKeys * this.charsPerKey;
+      layersUsed = (int)Math.Ceiling((double)text.Length / charsPerLayer);
+      if (layersUsed > 3) layersUsed = 3;
 
-      // Prepare key data and download
-      PrepareAndDownloadKey(i + 1, chunk);
-      successCount++;
+      int pos = 0;
+      int remaining = text.Length;
 
-      // Small delay between downloads for device processing
-      System.Threading.Thread.Sleep(100);
+      for (int layer = 1; layer <= layersUsed && remaining > 0; layer++)
+      {
+        // Set current layer
+        FormMain.KeyParam.KEY_Cur_Layer = (byte)layer;
+
+        for (int key = 1; key <= dataKeys && remaining > 0; key++)
+        {
+          int chunkLen = Math.Min(this.charsPerKey, remaining);
+          string chunk = text.Substring(pos, chunkLen);
+
+          // Prepare and download key to current layer
+          PrepareAndDownloadKeyToLayer(key, chunk, (byte)layer);
+          successCount++;
+          pos += chunkLen;
+          remaining -= chunkLen;
+
+          System.Threading.Thread.Sleep(100);
+        }
+      }
+
+      // Program the last key as layer toggle on ALL layers
+      for (int layer = 1; layer <= 3; layer++)
+      {
+        FormMain.KeyParam.KEY_Cur_Layer = (byte)layer;
+        PrepareAndDownloadLayerToggle(this.availableKeys, (byte)layer);
+        System.Threading.Thread.Sleep(100);
+      }
+
+      // Reset to layer 1
+      FormMain.KeyParam.KEY_Cur_Layer = (byte)1;
+
+      MessageBox.Show($"String downloaded across {layersUsed} layer(s)!\n\n" +
+        $"Keys 1-{dataKeys}: String data\n" +
+        $"Key {this.availableKeys}: Layer toggle (press to cycle)\n\n" +
+        $"Total: {successCount} key programming operations.",
+        "Multi-Layer Download Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+    else
+    {
+      // Single layer mode (original behavior)
+      for (int i = 0; i < keysNeeded; i++)
+      {
+        int startIndex = i * this.charsPerKey;
+        int length = Math.Min(this.charsPerKey, text.Length - startIndex);
+        string chunk = text.Substring(startIndex, length);
+
+        PrepareAndDownloadKey(i + 1, chunk);
+        successCount++;
+
+        System.Threading.Thread.Sleep(100);
+      }
+
+      MessageBox.Show($"String successfully downloaded to {successCount} key(s)!",
+        "Download Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+  }
+
+  private void PrepareAndDownloadKeyToLayer(int keyNum, string text, byte layer)
+  {
+    // Save current layer
+    byte savedLayer = FormMain.KeyParam.KEY_Cur_Layer;
+    FormMain.KeyParam.KEY_Cur_Layer = layer;
+
+    // Set the key number
+    FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeySet_KeyNum] = (byte)keyNum;
+
+    // Initialize key data
+    this.Set_Key_Init();
+    this.Clear_Key_Char();
+
+    // Add each character
+    foreach (char c in text)
+    {
+      byte hidCode = CharToHidCode(c, out bool needsShift);
+      if (hidCode != 0)
+      {
+        if (needsShift)
+        {
+          FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KEY_Char_Num - 1] |= (byte)0x02;
+        }
+        FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KEY_Char_Num] = hidCode;
+        FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyType_Num] |= (byte)1;
+        FormMain.KeyParam.KEY_Char_Num += (byte)2;
+        ++FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyGroupCharNum];
+      }
     }
 
-    MessageBox.Show($"String successfully downloaded to {successCount} key(s)!",
-      "Download Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    // Download
+    DownloadCurrentKey();
+
+    // Restore layer
+    FormMain.KeyParam.KEY_Cur_Layer = savedLayer;
+  }
+
+  private void PrepareAndDownloadLayerToggle(int keyNum, byte layer)
+  {
+    // Save current layer
+    byte savedLayer = FormMain.KeyParam.KEY_Cur_Layer;
+    FormMain.KeyParam.KEY_Cur_Layer = layer;
+
+    // Set the key number
+    FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeySet_KeyNum] = (byte)keyNum;
+
+    // Initialize key data
+    this.Set_Key_Init();
+    this.Clear_Key_Char();
+
+    // Set as layer toggle (type 4, target 0 = cycle)
+    FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyType_Num] = (byte)4;
+    FormMain.KeyParam.Data_Send_Buff[5] = (byte)0; // Toggle mode
+    FormMain.KeyParam.Data_Send_Buff[6] = (byte)0xA1; // Layer switch marker
+
+    // Download layer switch key
+    DownloadLayerSwitchKey();
+
+    // Restore layer
+    FormMain.KeyParam.KEY_Cur_Layer = savedLayer;
+  }
+
+  private void DownloadLayerSwitchKey()
+  {
+    byte[] arrayBuff = new byte[65];
+    if (!this.myHidLib.Get_Dev_Sta())
+      return;
+
+    arrayBuff[0] = FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeySet_KeyNum];
+    if (arrayBuff[0] == (byte)0)
+      return;
+
+    // Set layer in type byte
+    this.Send_SwLayer();
+    arrayBuff[1] = FormMain.KeyParam.KEY_Cur_Layer;
+    arrayBuff[1] <<= 4;
+    arrayBuff[1] |= (byte)4; // Layer switch type
+
+    // Layer switch data
+    arrayBuff[2] = FormMain.KeyParam.Data_Send_Buff[5]; // Target layer (0 = toggle)
+    arrayBuff[3] = FormMain.KeyParam.Data_Send_Buff[6]; // Command marker
+
+    if (this.WriteMode == (ushort)0)
+    {
+      this.myHid.Write(new report(FormMain.KeyParam.ReportID, arrayBuff));
+    }
+    else if (this.WriteMode == (ushort)1)
+    {
+      this.myHidLib.WriteDevice(FormMain.KeyParam.ReportID, arrayBuff);
+    }
+    this.Send_WriteFlash_Cmd();
   }
 
   private void PrepareAndDownloadKey(int keyNum, string text)
@@ -895,6 +1207,15 @@ public class FormMain : Form
         this.Key_Clear_Fun();
         FormMain.KeyParam.KEY_Cur_Page = (byte) 5;
         break;
+      case "Layer Switch":
+        this.splitContainer1.Panel2.Controls.Clear();
+        LayerSwitchKey layerSwitchKey = new LayerSwitchKey();
+        layerSwitchKey.Parent = (Control) this.splitContainer1.Panel2;
+        layerSwitchKey.Dock = DockStyle.Fill;
+        layerSwitchKey.Show();
+        this.Key_Clear_Fun();
+        FormMain.KeyParam.KEY_Cur_Page = (byte) 6;
+        break;
     }
   }
 
@@ -987,6 +1308,8 @@ public class FormMain : Form
     timer.Elapsed += new ElapsedEventHandler(this.Timer1_Elapsed);
   }
 
+  private byte lastDisplayedLayer = 0;
+
   private void Timer1_Elapsed(object sender, ElapsedEventArgs e)
   {
     this.AutoCheckUsb();
@@ -994,6 +1317,20 @@ public class FormMain : Form
     {
       FormMain.KeyParam.PageBet_Inte_Cmd = (byte) 0;
       this.Key_Clear_Fun();
+    }
+
+    // Update layer indicator when layer changes
+    if (this.lastDisplayedLayer != FormMain.KeyParam.KEY_Cur_Layer)
+    {
+      this.lastDisplayedLayer = FormMain.KeyParam.KEY_Cur_Layer;
+      if (this.lblLayerIndicator != null && this.lblLayerIndicator.InvokeRequired)
+      {
+        this.lblLayerIndicator.Invoke(new Action(() => UpdateLayerIndicator()));
+      }
+      else
+      {
+        UpdateLayerIndicator();
+      }
     }
     if (this.Display_Dowlaod_Char_TM-- == 0)
       this.Hide_Dowload_Text();
@@ -1293,15 +1630,28 @@ public class FormMain : Form
         this.myHidLib.WriteDevice(FormMain.KeyParam.ReportID, arrayBuff);
       this.Send_WriteFlashLED_Cmd();
     }
-    else
+    else if (((int) FormMain.KeyParam.Data_Send_Buff[(int) FormMain.KeyParam.KeyType_Num] & 15) == 3)
     {
-      if (((int) FormMain.KeyParam.Data_Send_Buff[(int) FormMain.KeyParam.KeyType_Num] & 15) != 3)
-        return;
+      // Mouse key type
       arrayBuff[2] = FormMain.KeyParam.Data_Send_Buff[5];
       arrayBuff[3] = FormMain.KeyParam.Data_Send_Buff[6];
       arrayBuff[4] = FormMain.KeyParam.Data_Send_Buff[7];
       arrayBuff[5] = FormMain.KeyParam.Data_Send_Buff[8];
       arrayBuff[6] = FormMain.KeyParam.Data_Send_Buff[9];
+      if (this.WriteMode == (ushort) 0)
+      {
+        int num = (int) this.myHid.Write(new report(FormMain.KeyParam.ReportID, arrayBuff));
+      }
+      else if (this.WriteMode == (ushort) 1)
+        this.myHidLib.WriteDevice(FormMain.KeyParam.ReportID, arrayBuff);
+      this.Send_WriteFlash_Cmd();
+    }
+    else if (((int) FormMain.KeyParam.Data_Send_Buff[(int) FormMain.KeyParam.KeyType_Num] & 15) == 4)
+    {
+      // Layer switch key type
+      // Send layer switch command: target layer in byte 2, command marker in byte 3
+      arrayBuff[2] = FormMain.KeyParam.Data_Send_Buff[5]; // Target layer (0=toggle, 1-3=specific)
+      arrayBuff[3] = FormMain.KeyParam.Data_Send_Buff[6]; // Command marker (0xA1)
       if (this.WriteMode == (ushort) 0)
       {
         int num = (int) this.myHid.Write(new report(FormMain.KeyParam.ReportID, arrayBuff));

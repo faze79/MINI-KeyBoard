@@ -1,9 +1,3 @@
-// Decompiled with JetBrains decompiler
-// Type: HIDTester.LayerFun
-// Assembly: MINI KeyBoard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-// MVID: 830E3432-592A-4FE8-A60E-4E46348E689C
-// Assembly location: C:\Users\davide.fasolo\OneDrive - Salvagnini Italia SpA\Documents\MINI-KEYBOARD\MINI KeyBoard.exe
-
 using System;
 using System.ComponentModel;
 using System.Drawing;
@@ -20,10 +14,14 @@ public class LayerFun : UserControl
   private RadioButton KEY_FunLayer1;
   private RadioButton KEY_FunLayer2;
   private RadioButton KEY_FunLayer3;
+  private Label lblTitle;
 
   // Modern UI Colors
   private readonly Color textColor = Color.FromArgb(241, 241, 241);
   private readonly Color panelBackColor = Color.FromArgb(37, 37, 38);
+  private readonly Color layer1Color = Color.FromArgb(0, 122, 204);   // Blue
+  private readonly Color layer2Color = Color.FromArgb(16, 124, 16);   // Green
+  private readonly Color layer3Color = Color.FromArgb(194, 59, 34);   // Red
 
   public LayerFun()
   {
@@ -34,13 +32,29 @@ public class LayerFun : UserControl
   private void ApplyModernTheme()
   {
     this.BackColor = this.panelBackColor;
-    foreach (Control ctrl in this.Controls)
+
+    // Style the title
+    if (this.lblTitle != null)
     {
-      if (ctrl is RadioButton rb)
-      {
-        rb.ForeColor = this.textColor;
-      }
+      this.lblTitle.ForeColor = this.textColor;
+      this.lblTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
     }
+
+    // Style layer buttons with distinct colors
+    StyleLayerButton(this.KEY_FunLayer1, this.layer1Color, "Layer 1");
+    StyleLayerButton(this.KEY_FunLayer2, this.layer2Color, "Layer 2");
+    StyleLayerButton(this.KEY_FunLayer3, this.layer3Color, "Layer 3");
+  }
+
+  private void StyleLayerButton(RadioButton rb, Color layerColor, string text)
+  {
+    if (rb == null) return;
+
+    rb.ForeColor = layerColor;
+    rb.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+    rb.Text = text;
+    rb.Cursor = Cursors.Hand;
+    rb.AutoSize = true;
   }
 
   private void KEY_FunLayer1_CheckedChanged(object sender, EventArgs e)
@@ -76,42 +90,64 @@ public class LayerFun : UserControl
 
   private void InitializeComponent()
   {
-    ComponentResourceManager componentResourceManager = new ComponentResourceManager(typeof (LayerFun));
     this.KEY_Layer1 = new RadioButton();
     this.KEY_Layer2 = new RadioButton();
     this.KEY_Layer3 = new RadioButton();
     this.KEY_FunLayer1 = new RadioButton();
     this.KEY_FunLayer2 = new RadioButton();
     this.KEY_FunLayer3 = new RadioButton();
+    this.lblTitle = new Label();
     this.SuspendLayout();
-    componentResourceManager.ApplyResources((object) this.KEY_Layer1, "KEY_Layer1");
-    this.KEY_Layer1.Name = "KEY_Layer1";
-    componentResourceManager.ApplyResources((object) this.KEY_Layer2, "KEY_Layer2");
-    this.KEY_Layer2.Name = "KEY_Layer2";
-    componentResourceManager.ApplyResources((object) this.KEY_Layer3, "KEY_Layer3");
-    this.KEY_Layer3.Name = "KEY_Layer3";
-    componentResourceManager.ApplyResources((object) this.KEY_FunLayer1, "KEY_FunLayer1");
+
+    // lblTitle
+    this.lblTitle.AutoSize = true;
+    this.lblTitle.Location = new Point(5, 5);
+    this.lblTitle.Name = "lblTitle";
+    this.lblTitle.Size = new Size(80, 15);
+    this.lblTitle.Text = "Edit Layer:";
+
+    // KEY_FunLayer1
+    this.KEY_FunLayer1.AutoSize = true;
     this.KEY_FunLayer1.Checked = true;
+    this.KEY_FunLayer1.Location = new Point(5, 28);
     this.KEY_FunLayer1.Name = "KEY_FunLayer1";
+    this.KEY_FunLayer1.Size = new Size(70, 20);
+    this.KEY_FunLayer1.TabIndex = 0;
     this.KEY_FunLayer1.TabStop = true;
+    this.KEY_FunLayer1.Text = "Layer 1";
     this.KEY_FunLayer1.UseVisualStyleBackColor = true;
     this.KEY_FunLayer1.CheckedChanged += new EventHandler(this.KEY_FunLayer1_CheckedChanged);
-    componentResourceManager.ApplyResources((object) this.KEY_FunLayer2, "KEY_FunLayer2");
+
+    // KEY_FunLayer2
+    this.KEY_FunLayer2.AutoSize = true;
+    this.KEY_FunLayer2.Location = new Point(5, 53);
     this.KEY_FunLayer2.Name = "KEY_FunLayer2";
-    this.KEY_FunLayer2.TabStop = true;
+    this.KEY_FunLayer2.Size = new Size(70, 20);
+    this.KEY_FunLayer2.TabIndex = 1;
+    this.KEY_FunLayer2.Text = "Layer 2";
     this.KEY_FunLayer2.UseVisualStyleBackColor = true;
     this.KEY_FunLayer2.CheckedChanged += new EventHandler(this.KEY_FunLayer2_CheckedChanged);
-    componentResourceManager.ApplyResources((object) this.KEY_FunLayer3, "KEY_FunLayer3");
+
+    // KEY_FunLayer3
+    this.KEY_FunLayer3.AutoSize = true;
+    this.KEY_FunLayer3.Location = new Point(5, 78);
     this.KEY_FunLayer3.Name = "KEY_FunLayer3";
-    this.KEY_FunLayer3.TabStop = true;
+    this.KEY_FunLayer3.Size = new Size(70, 20);
+    this.KEY_FunLayer3.TabIndex = 2;
+    this.KEY_FunLayer3.Text = "Layer 3";
     this.KEY_FunLayer3.UseVisualStyleBackColor = true;
     this.KEY_FunLayer3.CheckedChanged += new EventHandler(this.KEY_FunLayer3_CheckedChanged);
-    componentResourceManager.ApplyResources((object) this, "$this");
-    this.Controls.Add((Control) this.KEY_FunLayer3);
-    this.Controls.Add((Control) this.KEY_FunLayer2);
-    this.Controls.Add((Control) this.KEY_FunLayer1);
+
+    // LayerFun
+    this.AutoScaleDimensions = new SizeF(6F, 13F);
+    this.AutoScaleMode = AutoScaleMode.Font;
+    this.Controls.Add(this.lblTitle);
+    this.Controls.Add(this.KEY_FunLayer3);
+    this.Controls.Add(this.KEY_FunLayer2);
+    this.Controls.Add(this.KEY_FunLayer1);
     this.ForeColor = SystemColors.InactiveCaptionText;
-    this.Name = nameof (LayerFun);
+    this.Name = nameof(LayerFun);
+    this.Size = new Size(100, 110);
     this.ResumeLayout(false);
     this.PerformLayout();
   }
