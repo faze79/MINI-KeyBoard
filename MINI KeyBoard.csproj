@@ -33,13 +33,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HidLibrary">
-      <HintPath>lib\HidLibrary.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="HidLibrary\HidLibrary.csproj">
+      <Project>{801A1640-E613-4330-B0A7-ADC77D48D29B}</Project>
+      <Name>HidLibrary</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HID\report.cs" />

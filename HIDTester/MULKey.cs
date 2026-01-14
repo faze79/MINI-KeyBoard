@@ -6,6 +6,7 @@
 
 using System;
 using System.ComponentModel;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace HIDTester;
@@ -20,7 +21,37 @@ public class MULKey : UserControl
   private Button KEY_NextSong;
   private Button KEY_Mute;
 
-  public MULKey() => this.InitializeComponent();
+  // Modern UI Colors
+  private readonly Color keyBackColor = Color.FromArgb(60, 60, 65);
+  private readonly Color keyHoverColor = Color.FromArgb(80, 80, 85);
+  private readonly Color accentColor = Color.FromArgb(0, 122, 204);
+  private readonly Color textColor = Color.FromArgb(241, 241, 241);
+  private readonly Color panelBackColor = Color.FromArgb(37, 37, 38);
+
+  public MULKey()
+  {
+    this.InitializeComponent();
+    this.ApplyModernTheme();
+  }
+
+  private void ApplyModernTheme()
+  {
+    this.BackColor = this.panelBackColor;
+    foreach (Control ctrl in this.Controls)
+    {
+      if (ctrl is Button btn)
+      {
+        btn.FlatStyle = FlatStyle.Flat;
+        btn.FlatAppearance.BorderColor = Color.FromArgb(70, 70, 75);
+        btn.FlatAppearance.BorderSize = 1;
+        btn.FlatAppearance.MouseOverBackColor = this.keyHoverColor;
+        btn.FlatAppearance.MouseDownBackColor = this.accentColor;
+        btn.BackColor = this.keyBackColor;
+        btn.ForeColor = this.textColor;
+        btn.Cursor = Cursors.Hand;
+      }
+    }
+  }
 
   private void MULGeneral_Char_Set()
   {

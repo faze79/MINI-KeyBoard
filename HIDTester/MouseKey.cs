@@ -26,18 +26,45 @@ public class MouseKey : UserControl
   private Button Alt_Mouse_wheel_Up;
   private Button Alt_Mouse_wheel_Down;
 
-  public MouseKey() => this.InitializeComponent();
+  // Modern UI Colors
+  private readonly Color keyBackColor = Color.FromArgb(60, 60, 65);
+  private readonly Color keyHoverColor = Color.FromArgb(80, 80, 85);
+  private readonly Color accentColor = Color.FromArgb(0, 122, 204);
+  private readonly Color textColor = Color.FromArgb(241, 241, 241);
+  private readonly Color panelBackColor = Color.FromArgb(37, 37, 38);
+
+  public MouseKey()
+  {
+    this.InitializeComponent();
+    this.ApplyModernTheme();
+  }
+
+  private void ApplyModernTheme()
+  {
+    this.BackColor = this.panelBackColor;
+    foreach (Control ctrl in this.Controls)
+    {
+      if (ctrl is Button btn)
+      {
+        btn.FlatStyle = FlatStyle.Flat;
+        btn.FlatAppearance.BorderColor = Color.FromArgb(70, 70, 75);
+        btn.FlatAppearance.BorderSize = 1;
+        btn.FlatAppearance.MouseOverBackColor = this.keyHoverColor;
+        btn.FlatAppearance.MouseDownBackColor = this.accentColor;
+        btn.BackColor = this.keyBackColor;
+        btn.ForeColor = this.textColor;
+        btn.Cursor = Cursors.Hand;
+      }
+    }
+  }
 
   private void KEY_Colour_Init()
   {
-    int red = 152;
-    int green = 251;
-    int blue = 152;
-    this.KEY_Mouse_Left.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY_Mouse_Centre.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY_Mouse_Right.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY_MOUSE_WHEEL_ADD.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY_MOUSE_WHEEL_SUB.BackColor = Color.FromArgb(red, green, blue);
+    this.KEY_Mouse_Left.BackColor = this.keyBackColor;
+    this.KEY_Mouse_Centre.BackColor = this.keyBackColor;
+    this.KEY_Mouse_Right.BackColor = this.keyBackColor;
+    this.KEY_MOUSE_WHEEL_ADD.BackColor = this.keyBackColor;
+    this.KEY_MOUSE_WHEEL_SUB.BackColor = this.keyBackColor;
   }
 
   private void MouseGeneral_Char_Set()

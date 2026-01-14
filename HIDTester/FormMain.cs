@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Timers;
@@ -28,8 +29,15 @@ public class FormMain : Form
   private HidLib myHidLib = new HidLib();
   private byte[] RecDataBuffer = new byte[90];
   private int Display_Dowlaod_Char_TM;
-  private readonly Color menuBackColor = Color.FromArgb(200, 200, 169);
-  private readonly Color menuMouserOverColor = Color.FromArgb(230, 206, 172);
+  // Modern UI Colors
+  private readonly Color menuBackColor = Color.FromArgb(45, 45, 48);
+  private readonly Color menuMouserOverColor = Color.FromArgb(62, 62, 66);
+  private readonly Color accentColor = Color.FromArgb(0, 122, 204);
+  private readonly Color keyDefaultColor = Color.FromArgb(60, 60, 65);
+  private readonly Color keySelectedColor = Color.FromArgb(0, 122, 204);
+  private readonly Color keyHoverColor = Color.FromArgb(80, 80, 85);
+  private readonly Color textColor = Color.FromArgb(241, 241, 241);
+  private readonly Color panelBackColor = Color.FromArgb(37, 37, 38);
   private readonly string[] menuStr = new string[6]
   {
     "KEY",
@@ -78,17 +86,733 @@ public class FormMain : Form
   private PictureBox pictureBox1;
   private Label label_Dowload_Dsp;
 
+  // String splitter controls
+  private TextBox txtStringInput;
+  private Label lblKeysRequired;
+  private Button btnApplyString;
+  private NumericUpDown numCharsPerKey;
+  private int charsPerKey = 5; // Firmware only stores 5 chars per key (indices 1-5)
+  private int availableKeys = 3; // Default, updated when device connects
+
   public FormMain()
   {
     this.InitializeComponent();
     this.myHid.DataReceived += new EventHandler<report>(this.myhid_DataReceived);
     this.myHid.DeviceRemoved += new EventHandler(this.myhid_DeviceRemoved);
+    this.ApplyModernTheme();
     this.MenuList();
     this.KEY_Colour_Init();
     this.Time_Display_Text();
     this.Hide_Dowload_Text();
     this.LayerFunList();
     this.Lanuage_Set_EN();
+  }
+
+  private void ApplyModernTheme()
+  {
+    // Form styling
+    this.BackColor = this.panelBackColor;
+    this.ForeColor = this.textColor;
+
+    // Style all key buttons
+    StyleKeyButton(this.KEY1);
+    StyleKeyButton(this.KEY2);
+    StyleKeyButton(this.KEY3);
+    StyleKeyButton(this.KEY4);
+    StyleKeyButton(this.KEY5);
+    StyleKeyButton(this.KEY6);
+    StyleKeyButton(this.KEY7);
+    StyleKeyButton(this.KEY8);
+    StyleKeyButton(this.KEY9);
+    StyleKeyButton(this.KEY10);
+    StyleKeyButton(this.KEY11);
+    StyleKeyButton(this.KEY12);
+    StyleKeyButton(this.KEY13);
+    StyleKeyButton(this.KEY14);
+    StyleKeyButton(this.KEY15);
+    StyleKeyButton(this.KEY16);
+
+    // Style knob buttons
+    StyleKeyButton(this.K1_Left);
+    StyleKeyButton(this.K1_Centre);
+    StyleKeyButton(this.K1_Right);
+    StyleKeyButton(this.K2_Left);
+    StyleKeyButton(this.K2_Centre);
+    StyleKeyButton(this.K2_Right);
+    StyleKeyButton(this.K3_Left);
+    StyleKeyButton(this.K3_Centre);
+    StyleKeyButton(this.K3_Right);
+
+    // Style action buttons
+    StyleActionButton(this.Download);
+    StyleActionButton(this.Key_Clear);
+
+    // Style text boxes
+    StyleTextBox(this.SetText);
+    StyleTextBox(this.SetFunText);
+
+    // Style status label
+    this.stateLabel.ForeColor = this.textColor;
+    this.stateLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+
+    // Style panels
+    this.splitContainer1.BackColor = this.panelBackColor;
+    this.splitContainer1.Panel1.BackColor = this.panelBackColor;
+    this.splitContainer1.Panel2.BackColor = this.panelBackColor;
+    this.flowLayoutPanel1.BackColor = this.menuBackColor;
+    this.flowLayoutPanel_LayerFun.BackColor = this.panelBackColor;
+    this.pictureBox1.BackColor = this.panelBackColor;
+
+    // Create string splitter controls
+    CreateStringSplitterControls();
+
+    // Create device info button
+    CreateDeviceInfoButton();
+  }
+
+  private Button btnDeviceInfo;
+  private Button btnHidDebug;
+  private static List<string> hidLog = new List<string>();
+  private static bool loggingEnabled = false;
+
+  private void CreateDeviceInfoButton()
+  {
+    this.btnDeviceInfo = new Button();
+    this.btnDeviceInfo.Text = "Device Info";
+    this.btnDeviceInfo.Location = new Point(980, 205);
+    this.btnDeviceInfo.Size = new Size(120, 30);
+    this.btnDeviceInfo.FlatStyle = FlatStyle.Flat;
+    this.btnDeviceInfo.FlatAppearance.BorderColor = Color.FromArgb(70, 70, 75);
+    this.btnDeviceInfo.BackColor = Color.FromArgb(60, 60, 65);
+    this.btnDeviceInfo.ForeColor = this.textColor;
+    this.btnDeviceInfo.Cursor = Cursors.Hand;
+    this.btnDeviceInfo.Click += BtnDeviceInfo_Click;
+    this.Controls.Add(this.btnDeviceInfo);
+    this.btnDeviceInfo.BringToFront();
+
+    this.btnHidDebug = new Button();
+    this.btnHidDebug.Text = "HID Debug";
+    this.btnHidDebug.Location = new Point(1110, 205);
+    this.btnHidDebug.Size = new Size(120, 30);
+    this.btnHidDebug.FlatStyle = FlatStyle.Flat;
+    this.btnHidDebug.FlatAppearance.BorderColor = Color.FromArgb(70, 70, 75);
+    this.btnHidDebug.BackColor = Color.FromArgb(60, 60, 65);
+    this.btnHidDebug.ForeColor = this.textColor;
+    this.btnHidDebug.Cursor = Cursors.Hand;
+    this.btnHidDebug.Click += BtnHidDebug_Click;
+    this.Controls.Add(this.btnHidDebug);
+    this.btnHidDebug.BringToFront();
+  }
+
+  public static void LogHidWrite(byte reportId, byte[] data, string context = "")
+  {
+    if (!loggingEnabled) return;
+    string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+    string hexData = BitConverter.ToString(data.Take(Math.Min(32, data.Length)).ToArray());
+    if (data.Length > 32) hexData += "...";
+    string entry = $"[{timestamp}] WRITE ReportID={reportId} {context}\n  Data[{data.Length}]: {hexData}";
+    hidLog.Add(entry);
+  }
+
+  private void BtnHidDebug_Click(object sender, EventArgs e)
+  {
+    Form debugForm = new Form();
+    debugForm.Text = "HID Debug Console";
+    debugForm.Size = new Size(700, 550);
+    debugForm.StartPosition = FormStartPosition.CenterParent;
+    debugForm.BackColor = Color.FromArgb(37, 37, 38);
+
+    TextBox txtLog = new TextBox();
+    txtLog.Name = "txtLog";
+    txtLog.Multiline = true;
+    txtLog.ReadOnly = true;
+    txtLog.ScrollBars = ScrollBars.Both;
+    txtLog.Dock = DockStyle.Fill;
+    txtLog.BackColor = Color.FromArgb(20, 20, 20);
+    txtLog.ForeColor = Color.FromArgb(0, 255, 0);
+    txtLog.Font = new Font("Consolas", 9F);
+    txtLog.Text = string.Join("\n\n", hidLog);
+
+    Panel buttonPanel = new Panel();
+    buttonPanel.Dock = DockStyle.Bottom;
+    buttonPanel.Height = 45;
+    buttonPanel.BackColor = Color.FromArgb(45, 45, 48);
+
+    CheckBox chkLogging = new CheckBox();
+    chkLogging.Text = "Enable Logging";
+    chkLogging.Checked = loggingEnabled;
+    chkLogging.Location = new Point(10, 12);
+    chkLogging.AutoSize = true;
+    chkLogging.ForeColor = Color.White;
+    chkLogging.CheckedChanged += (s, ev) => { loggingEnabled = chkLogging.Checked; };
+
+    Button btnClear = new Button();
+    btnClear.Text = "Clear Log";
+    btnClear.Location = new Point(150, 8);
+    btnClear.Size = new Size(80, 28);
+    btnClear.FlatStyle = FlatStyle.Flat;
+    btnClear.BackColor = Color.FromArgb(60, 60, 65);
+    btnClear.ForeColor = Color.White;
+    btnClear.Click += (s, ev) => { hidLog.Clear(); txtLog.Text = ""; };
+
+    Button btnRefresh = new Button();
+    btnRefresh.Text = "Refresh";
+    btnRefresh.Location = new Point(240, 8);
+    btnRefresh.Size = new Size(80, 28);
+    btnRefresh.FlatStyle = FlatStyle.Flat;
+    btnRefresh.BackColor = Color.FromArgb(60, 60, 65);
+    btnRefresh.ForeColor = Color.White;
+    btnRefresh.Click += (s, ev) => { txtLog.Text = string.Join("\n\n", hidLog); };
+
+    Button btnTestRead = new Button();
+    btnTestRead.Text = "Test Read";
+    btnTestRead.Location = new Point(330, 8);
+    btnTestRead.Size = new Size(80, 28);
+    btnTestRead.FlatStyle = FlatStyle.Flat;
+    btnTestRead.BackColor = Color.FromArgb(0, 122, 204);
+    btnTestRead.ForeColor = Color.White;
+    btnTestRead.Click += (s, ev) => { TestHidRead(txtLog); };
+
+    Button btnScanReports = new Button();
+    btnScanReports.Text = "Scan Reports";
+    btnScanReports.Location = new Point(420, 8);
+    btnScanReports.Size = new Size(90, 28);
+    btnScanReports.FlatStyle = FlatStyle.Flat;
+    btnScanReports.BackColor = Color.FromArgb(0, 122, 204);
+    btnScanReports.ForeColor = Color.White;
+    btnScanReports.Click += (s, ev) => { ScanReportIds(txtLog); };
+
+    Button btnCopy = new Button();
+    btnCopy.Text = "Copy";
+    btnCopy.Location = new Point(520, 8);
+    btnCopy.Size = new Size(60, 28);
+    btnCopy.FlatStyle = FlatStyle.Flat;
+    btnCopy.BackColor = Color.FromArgb(60, 60, 65);
+    btnCopy.ForeColor = Color.White;
+    btnCopy.Click += (s, ev) => {
+      if (!string.IsNullOrEmpty(txtLog.Text))
+        Clipboard.SetText(txtLog.Text);
+    };
+
+    buttonPanel.Controls.Add(chkLogging);
+    buttonPanel.Controls.Add(btnClear);
+    buttonPanel.Controls.Add(btnRefresh);
+    buttonPanel.Controls.Add(btnTestRead);
+    buttonPanel.Controls.Add(btnScanReports);
+    buttonPanel.Controls.Add(btnCopy);
+
+    debugForm.Controls.Add(txtLog);
+    debugForm.Controls.Add(buttonPanel);
+    debugForm.Show();
+  }
+
+  private void TestHidRead(TextBox txtLog)
+  {
+    if (!this.myHidLib.Get_Dev_Sta())
+    {
+      txtLog.AppendText("\n[ERROR] Device not connected\n");
+      return;
+    }
+
+    txtLog.AppendText("\n=== Testing HID Read ===\n");
+
+    // Try reading with different methods
+    var caps = this.myHidLib.GetCapabilities();
+    if (caps != null)
+    {
+      txtLog.AppendText($"Input Report Size: {caps.InputReportByteLength} bytes\n");
+      txtLog.AppendText($"Output Report Size: {caps.OutputReportByteLength} bytes\n");
+      txtLog.AppendText($"Feature Report Size: {caps.FeatureReportByteLength} bytes\n");
+    }
+
+    // Try to read input report synchronously
+    txtLog.AppendText("\nAttempting to read stored config...\n");
+    txtLog.AppendText("(Note: This device may not support reading back configuration)\n");
+  }
+
+  private void ScanReportIds(TextBox txtLog)
+  {
+    if (!this.myHidLib.Get_Dev_Sta())
+    {
+      txtLog.AppendText("\n[ERROR] Device not connected\n");
+      return;
+    }
+
+    txtLog.AppendText("\n=== Scanning Report IDs (0-255) ===\n");
+    txtLog.AppendText("Looking for valid feature reports...\n\n");
+
+    int found = 0;
+    for (int reportId = 0; reportId < 256; reportId++)
+    {
+      if (this.myHidLib.ReadFeatureReport((byte)reportId, out byte[] data))
+      {
+        if (data != null && data.Length > 0)
+        {
+          found++;
+          string hexData = BitConverter.ToString(data.Take(Math.Min(20, data.Length)).ToArray());
+          txtLog.AppendText($"Report ID {reportId}: {data.Length} bytes\n");
+          txtLog.AppendText($"  Data: {hexData}\n");
+          if (data.Length > 20) txtLog.AppendText("  ...(truncated)\n");
+          txtLog.AppendText("\n");
+        }
+      }
+      // Process events every 16 iterations to keep UI responsive
+      if (reportId % 16 == 0) Application.DoEvents();
+    }
+
+    if (found == 0)
+    {
+      txtLog.AppendText("No feature reports found.\n");
+      txtLog.AppendText("This device likely uses output reports only for configuration.\n");
+    }
+    else
+    {
+      txtLog.AppendText($"\nTotal: {found} feature report(s) found.\n");
+    }
+
+    txtLog.AppendText("\n=== Scan Complete ===\n");
+  }
+
+  private void BtnDeviceInfo_Click(object sender, EventArgs e)
+  {
+    if (!this.myHidLib.Get_Dev_Sta())
+    {
+      MessageBox.Show("Please connect a keyboard first.", "Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+      return;
+    }
+
+    var caps = this.myHidLib.GetCapabilities();
+    var attrs = this.myHidLib.GetAttributes();
+    string product = this.myHidLib.GetProductString() ?? "(unable to read)";
+    string manufacturer = this.myHidLib.GetManufacturerString() ?? "(unable to read)";
+    string serial = this.myHidLib.GetSerialNumber() ?? "(unable to read)";
+    string devicePath = this.myHidLib.GetDevicePath() ?? "(unknown)";
+
+    string info = "=== DEVICE ATTRIBUTES ===\n";
+    if (attrs != null)
+    {
+      info += $"Vendor ID: 0x{attrs.VendorId:X4} ({attrs.VendorId})\n";
+      info += $"Product ID: 0x{attrs.ProductId:X4} ({attrs.ProductId})\n";
+      info += $"Version: {attrs.Version}\n";
+    }
+    info += $"Product: {product}\n";
+    info += $"Manufacturer: {manufacturer}\n";
+    info += $"Serial: {serial}\n\n";
+
+    info += "=== HID CAPABILITIES ===\n";
+    if (caps != null)
+    {
+      info += $"Usage Page: 0x{caps.UsagePage:X4}\n";
+      info += $"Usage: 0x{caps.Usage:X4}\n";
+      info += $"Input Report Length: {caps.InputReportByteLength} bytes\n";
+      info += $"Output Report Length: {caps.OutputReportByteLength} bytes\n";
+      info += $"Feature Report Length: {caps.FeatureReportByteLength} bytes\n";
+      info += $"Number of Link Collection Nodes: {caps.NumberLinkCollectionNodes}\n";
+      info += $"Input Button Caps: {caps.NumberInputButtonCaps}\n";
+      info += $"Input Value Caps: {caps.NumberInputValueCaps}\n";
+      info += $"Input Data Indices: {caps.NumberInputDataIndices}\n";
+      info += $"Output Button Caps: {caps.NumberOutputButtonCaps}\n";
+      info += $"Output Value Caps: {caps.NumberOutputValueCaps}\n";
+      info += $"Output Data Indices: {caps.NumberOutputDataIndices}\n";
+      info += $"Feature Button Caps: {caps.NumberFeatureButtonCaps}\n";
+      info += $"Feature Value Caps: {caps.NumberFeatureValueCaps}\n";
+      info += $"Feature Data Indices: {caps.NumberFeatureDataIndices}\n";
+    }
+
+    info += $"\n=== DEVICE PATH ===\n{devicePath}\n";
+
+    // Try to read feature reports to discover more
+    info += "\n=== FEATURE REPORT SCAN ===\n";
+    for (byte reportId = 0; reportId < 10; reportId++)
+    {
+      if (this.myHidLib.ReadFeatureReport(reportId, out byte[] data) && data != null && data.Length > 0)
+      {
+        info += $"Report ID {reportId}: {data.Length} bytes - ";
+        info += BitConverter.ToString(data.Take(Math.Min(16, data.Length)).ToArray());
+        if (data.Length > 16) info += "...";
+        info += "\n";
+      }
+    }
+
+    // Show in a scrollable dialog
+    Form infoForm = new Form();
+    infoForm.Text = "Device Information";
+    infoForm.Size = new Size(550, 500);
+    infoForm.StartPosition = FormStartPosition.CenterParent;
+    infoForm.BackColor = Color.FromArgb(37, 37, 38);
+
+    TextBox txtInfo = new TextBox();
+    txtInfo.Multiline = true;
+    txtInfo.ReadOnly = true;
+    txtInfo.ScrollBars = ScrollBars.Both;
+    txtInfo.Dock = DockStyle.Fill;
+    txtInfo.BackColor = Color.FromArgb(30, 30, 30);
+    txtInfo.ForeColor = Color.FromArgb(220, 220, 220);
+    txtInfo.Font = new Font("Consolas", 9F);
+    txtInfo.Text = info;
+    txtInfo.SelectionStart = 0;
+
+    Button btnCopy = new Button();
+    btnCopy.Text = "Copy to Clipboard";
+    btnCopy.Dock = DockStyle.Bottom;
+    btnCopy.Height = 35;
+    btnCopy.FlatStyle = FlatStyle.Flat;
+    btnCopy.BackColor = Color.FromArgb(0, 122, 204);
+    btnCopy.ForeColor = Color.White;
+    btnCopy.Click += (s, ev) => {
+      Clipboard.SetText(info);
+      MessageBox.Show("Copied to clipboard!", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    };
+
+    infoForm.Controls.Add(txtInfo);
+    infoForm.Controls.Add(btnCopy);
+    infoForm.ShowDialog(this);
+  }
+
+  private void CreateStringSplitterControls()
+  {
+    // Set form to a larger fixed size to accommodate the GroupBox and buttons
+    this.Width = 1320;
+    this.Height = 600;
+
+    // Create GroupBox container on the right side (positioned to avoid overlap)
+    GroupBox grpStringSplitter = new GroupBox();
+    grpStringSplitter.Text = "Split String to Keys";
+    grpStringSplitter.ForeColor = this.textColor;
+    grpStringSplitter.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+    grpStringSplitter.Location = new Point(980, 10);
+    grpStringSplitter.Size = new Size(250, 185);
+    grpStringSplitter.BackColor = Color.FromArgb(45, 45, 48);
+    this.Controls.Add(grpStringSplitter);
+
+    // TextBox for string input
+    this.txtStringInput = new TextBox();
+    this.txtStringInput.Location = new Point(10, 25);
+    this.txtStringInput.Size = new Size(220, 25);
+    this.txtStringInput.MaxLength = this.charsPerKey * 16; // Max 16 keys
+    StyleTextBox(this.txtStringInput);
+    this.txtStringInput.TextChanged += TxtStringInput_TextChanged;
+    grpStringSplitter.Controls.Add(this.txtStringInput);
+
+    // Label showing keys required
+    this.lblKeysRequired = new Label();
+    this.lblKeysRequired.Text = "Keys: 0 / 16";
+    this.lblKeysRequired.ForeColor = this.textColor;
+    this.lblKeysRequired.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+    this.lblKeysRequired.Location = new Point(10, 55);
+    this.lblKeysRequired.AutoSize = true;
+    grpStringSplitter.Controls.Add(this.lblKeysRequired);
+
+    // Chars per key label
+    Label lblCharsPerKey = new Label();
+    lblCharsPerKey.Text = "Chars/key:";
+    lblCharsPerKey.ForeColor = Color.FromArgb(160, 160, 160);
+    lblCharsPerKey.Font = new Font("Segoe UI", 8F);
+    lblCharsPerKey.Location = new Point(120, 57);
+    lblCharsPerKey.AutoSize = true;
+    grpStringSplitter.Controls.Add(lblCharsPerKey);
+
+    // Chars per key numeric selector
+    this.numCharsPerKey = new NumericUpDown();
+    this.numCharsPerKey.Location = new Point(185, 53);
+    this.numCharsPerKey.Size = new Size(50, 23);
+    this.numCharsPerKey.Minimum = 1;
+    this.numCharsPerKey.Maximum = 30;
+    this.numCharsPerKey.Value = this.charsPerKey;
+    this.numCharsPerKey.BackColor = Color.FromArgb(60, 60, 65);
+    this.numCharsPerKey.ForeColor = this.textColor;
+    this.numCharsPerKey.ValueChanged += NumCharsPerKey_ValueChanged;
+    grpStringSplitter.Controls.Add(this.numCharsPerKey);
+
+    // Apply and Download button
+    this.btnApplyString = new Button();
+    this.btnApplyString.Text = "Apply && Download";
+    this.btnApplyString.Location = new Point(10, 85);
+    this.btnApplyString.Size = new Size(140, 30);
+    StyleActionButton(this.btnApplyString);
+    this.btnApplyString.Click += BtnApplyString_Click;
+    grpStringSplitter.Controls.Add(this.btnApplyString);
+
+    // Help label
+    Label lblHelp = new Label();
+    lblHelp.Text = "Firmware limit: 5 chars/key.\nThe 6th char is ignored by\ndevice storage.";
+    lblHelp.ForeColor = Color.FromArgb(255, 180, 100);
+    lblHelp.Font = new Font("Segoe UI", 7.5F);
+    lblHelp.Location = new Point(10, 120);
+    lblHelp.AutoSize = true;
+    grpStringSplitter.Controls.Add(lblHelp);
+
+    // Bring GroupBox to front
+    grpStringSplitter.BringToFront();
+  }
+
+  private void NumCharsPerKey_ValueChanged(object sender, EventArgs e)
+  {
+    this.charsPerKey = (int)this.numCharsPerKey.Value;
+    UpdateKeysRequiredLabel();
+  }
+
+  private void TxtStringInput_TextChanged(object sender, EventArgs e)
+  {
+    UpdateKeysRequiredLabel();
+  }
+
+  private void UpdateKeysRequiredLabel()
+  {
+    string text = this.txtStringInput?.Text ?? "";
+    int keysNeeded = (int)Math.Ceiling((double)text.Length / this.charsPerKey);
+    if (keysNeeded == 0 && text.Length > 0) keysNeeded = 1;
+
+    // Update max length based on available keys
+    if (this.txtStringInput != null)
+    {
+      this.txtStringInput.MaxLength = this.charsPerKey * this.availableKeys;
+    }
+
+    // Update label with color coding
+    if (this.lblKeysRequired != null)
+    {
+      this.lblKeysRequired.Text = $"Keys: {keysNeeded} / {this.availableKeys}";
+      if (keysNeeded > this.availableKeys)
+      {
+        this.lblKeysRequired.ForeColor = Color.Red;
+      }
+      else if (keysNeeded > 0)
+      {
+        this.lblKeysRequired.ForeColor = Color.LightGreen;
+      }
+      else
+      {
+        this.lblKeysRequired.ForeColor = this.textColor;
+      }
+    }
+  }
+
+  private void BtnApplyString_Click(object sender, EventArgs e)
+  {
+    if (!this.myHidLib.Get_Dev_Sta())
+    {
+      MessageBox.Show("Please connect a keyboard first.", "Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+      return;
+    }
+
+    string text = this.txtStringInput.Text;
+    if (string.IsNullOrEmpty(text))
+    {
+      MessageBox.Show("Please enter a string to split.", "Empty String", MessageBoxButtons.OK, MessageBoxIcon.Information);
+      return;
+    }
+
+    int keysNeeded = (int)Math.Ceiling((double)text.Length / this.charsPerKey);
+    if (keysNeeded > this.availableKeys)
+    {
+      MessageBox.Show($"String too long. Maximum {this.availableKeys * this.charsPerKey} characters ({this.availableKeys} keys).",
+        "String Too Long", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+      return;
+    }
+
+    int successCount = 0;
+    for (int i = 0; i < keysNeeded; i++)
+    {
+      int startIndex = i * this.charsPerKey;
+      int length = Math.Min(this.charsPerKey, text.Length - startIndex);
+      string chunk = text.Substring(startIndex, length);
+
+      // Prepare key data and download
+      PrepareAndDownloadKey(i + 1, chunk);
+      successCount++;
+
+      // Small delay between downloads for device processing
+      System.Threading.Thread.Sleep(100);
+    }
+
+    MessageBox.Show($"String successfully downloaded to {successCount} key(s)!",
+      "Download Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+  }
+
+  private void PrepareAndDownloadKey(int keyNum, string text)
+  {
+    // Set the key number
+    FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeySet_KeyNum] = (byte)keyNum;
+
+    // Initialize key data (same as clicking a key button)
+    this.Set_Key_Init();
+    this.Clear_Key_Char();
+
+    // Add each character - each char uses one slot with modifier byte + keycode byte
+    foreach (char c in text)
+    {
+      byte hidCode = CharToHidCode(c, out bool needsShift);
+      if (hidCode != 0)
+      {
+        // If shift is needed (uppercase or shifted symbol), set modifier at KEY_Char_Num - 1
+        if (needsShift)
+        {
+          FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KEY_Char_Num - 1] |= (byte)0x02;
+        }
+
+        // Store the HID code at current KEY_Char_Num position
+        FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KEY_Char_Num] = hidCode;
+
+        // Set key type to basic (type 1) and increment counters (same as General_Char_Set)
+        FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyType_Num] |= (byte)1;
+        FormMain.KeyParam.KEY_Char_Num += (byte)2;
+        ++FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyGroupCharNum];
+      }
+    }
+
+    // Now call Download logic directly
+    DownloadCurrentKey();
+  }
+
+  private void DownloadCurrentKey()
+  {
+    byte[] arrayBuff = new byte[65];
+    if (!this.myHidLib.Get_Dev_Sta())
+      return;
+
+    arrayBuff[0] = FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeySet_KeyNum];
+    if (arrayBuff[0] == (byte)0)
+      return;
+
+    if (FormMain.KeyParam.ReportID == (byte)0)
+    {
+      arrayBuff[1] = (FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyType_Num] &= (byte)15);
+    }
+    else
+    {
+      this.Send_SwLayer();
+      arrayBuff[1] = FormMain.KeyParam.KEY_Cur_Layer;
+      arrayBuff[1] <<= 4;
+      arrayBuff[1] |= FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyType_Num];
+    }
+
+    // Handle basic key type (type 1)
+    if (((int)FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyType_Num] & 15) == 1)
+    {
+      arrayBuff[2] = FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyGroupCharNum];
+      for (byte index = 0; (int)index <= (int)FormMain.KeyParam.Data_Send_Buff[(int)FormMain.KeyParam.KeyGroupCharNum]; ++index)
+      {
+        arrayBuff[3] = index;
+        if (index == 0)
+        {
+          arrayBuff[4] = FormMain.KeyParam.Data_Send_Buff[4];
+          arrayBuff[5] = (byte)0;
+        }
+        else
+        {
+          int dataOffset = 4 + ((index - 1) * 2);
+          arrayBuff[4] = FormMain.KeyParam.Data_Send_Buff[dataOffset];
+          arrayBuff[5] = FormMain.KeyParam.Data_Send_Buff[dataOffset + 1];
+        }
+        if (this.WriteMode == (ushort)0)
+        {
+          this.myHid.Write(new report(FormMain.KeyParam.ReportID, arrayBuff));
+        }
+        else if (this.WriteMode == (ushort)1)
+        {
+          this.myHidLib.WriteDevice(FormMain.KeyParam.ReportID, arrayBuff);
+        }
+      }
+      this.Send_WriteFlash_Cmd();
+    }
+  }
+
+  private byte CharToHidCode(char c, out bool needsShift)
+  {
+    needsShift = false;
+
+    // Lowercase letters
+    if (c >= 'a' && c <= 'z')
+      return (byte)(c - 'a' + 0x04);
+
+    // Uppercase letters
+    if (c >= 'A' && c <= 'Z')
+    {
+      needsShift = true;
+      return (byte)(c - 'A' + 0x04);
+    }
+
+    // Numbers
+    if (c >= '1' && c <= '9')
+      return (byte)(c - '1' + 0x1E);
+    if (c == '0')
+      return 0x27;
+
+    // Special characters
+    switch (c)
+    {
+      case ' ': return 0x2C; // Space
+      case '-': return 0x2D;
+      case '=': return 0x2E;
+      case '[': return 0x2F;
+      case ']': return 0x30;
+      case '\\': return 0x31;
+      case ';': return 0x33;
+      case '\'': return 0x34;
+      case '`': return 0x35;
+      case ',': return 0x36;
+      case '.': return 0x37;
+      case '/': return 0x38;
+
+      // Shifted characters
+      case '!': needsShift = true; return 0x1E;
+      case '@': needsShift = true; return 0x1F;
+      case '#': needsShift = true; return 0x20;
+      case '$': needsShift = true; return 0x21;
+      case '%': needsShift = true; return 0x22;
+      case '^': needsShift = true; return 0x23;
+      case '&': needsShift = true; return 0x24;
+      case '*': needsShift = true; return 0x25;
+      case '(': needsShift = true; return 0x26;
+      case ')': needsShift = true; return 0x27;
+      case '_': needsShift = true; return 0x2D;
+      case '+': needsShift = true; return 0x2E;
+      case '{': needsShift = true; return 0x2F;
+      case '}': needsShift = true; return 0x30;
+      case '|': needsShift = true; return 0x31;
+      case ':': needsShift = true; return 0x33;
+      case '"': needsShift = true; return 0x34;
+      case '~': needsShift = true; return 0x35;
+      case '<': needsShift = true; return 0x36;
+      case '>': needsShift = true; return 0x37;
+      case '?': needsShift = true; return 0x38;
+
+      default: return 0;
+    }
+  }
+
+  private void StyleKeyButton(Button btn)
+  {
+    btn.FlatStyle = FlatStyle.Flat;
+    btn.FlatAppearance.BorderColor = Color.FromArgb(70, 70, 75);
+    btn.FlatAppearance.BorderSize = 1;
+    btn.FlatAppearance.MouseOverBackColor = this.keyHoverColor;
+    btn.FlatAppearance.MouseDownBackColor = this.accentColor;
+    btn.BackColor = this.keyDefaultColor;
+    btn.ForeColor = this.textColor;
+    btn.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+    btn.Cursor = Cursors.Hand;
+  }
+
+  private void StyleActionButton(Button btn)
+  {
+    btn.FlatStyle = FlatStyle.Flat;
+    btn.FlatAppearance.BorderSize = 0;
+    btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 150, 230);
+    btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(0, 100, 180);
+    btn.BackColor = this.accentColor;
+    btn.ForeColor = Color.White;
+    btn.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+    btn.Cursor = Cursors.Hand;
+  }
+
+  private void StyleTextBox(TextBox txt)
+  {
+    txt.BackColor = Color.FromArgb(51, 51, 55);
+    txt.ForeColor = this.textColor;
+    txt.BorderStyle = BorderStyle.FixedSingle;
+    txt.Font = new Font("Consolas", 10F);
   }
 
   private void MenuList()
@@ -100,9 +824,13 @@ public class FormMain : Form
       button.FlatStyle = FlatStyle.Flat;
       button.FlatAppearance.MouseOverBackColor = this.menuMouserOverColor;
       button.FlatAppearance.BorderSize = 0;
+      button.BackColor = this.menuBackColor;
+      button.ForeColor = this.textColor;
+      button.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
       button.Width = this.flowLayoutPanel1.Width;
       button.Height = 40;
       button.Margin = new Padding() { All = 0 };
+      button.Cursor = Cursors.Hand;
       button.MouseClick += new MouseEventHandler(this.Btn_OnClick);
       this.flowLayoutPanel1.Controls.Add((Control) button);
       this.flowLayoutPanel1.BackColor = this.menuBackColor;
@@ -634,34 +1362,31 @@ public class FormMain : Form
 
   private void KEY_Colour_Init()
   {
-    int red = 152;
-    int green = 251;
-    int blue = 152;
-    this.KEY1.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY2.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY3.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY4.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY5.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY6.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY7.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY8.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY9.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY10.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY11.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY12.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY13.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY14.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY15.BackColor = Color.FromArgb(red, green, blue);
-    this.KEY16.BackColor = Color.FromArgb(red, green, blue);
-    this.K1_Left.BackColor = Color.FromArgb(red, green, blue);
-    this.K1_Centre.BackColor = Color.FromArgb(red, green, blue);
-    this.K1_Right.BackColor = Color.FromArgb(red, green, blue);
-    this.K2_Left.BackColor = Color.FromArgb(red, green, blue);
-    this.K2_Centre.BackColor = Color.FromArgb(red, green, blue);
-    this.K2_Right.BackColor = Color.FromArgb(red, green, blue);
-    this.K3_Left.BackColor = Color.FromArgb(red, green, blue);
-    this.K3_Centre.BackColor = Color.FromArgb(red, green, blue);
-    this.K3_Right.BackColor = Color.FromArgb(red, green, blue);
+    this.KEY1.BackColor = this.keyDefaultColor;
+    this.KEY2.BackColor = this.keyDefaultColor;
+    this.KEY3.BackColor = this.keyDefaultColor;
+    this.KEY4.BackColor = this.keyDefaultColor;
+    this.KEY5.BackColor = this.keyDefaultColor;
+    this.KEY6.BackColor = this.keyDefaultColor;
+    this.KEY7.BackColor = this.keyDefaultColor;
+    this.KEY8.BackColor = this.keyDefaultColor;
+    this.KEY9.BackColor = this.keyDefaultColor;
+    this.KEY10.BackColor = this.keyDefaultColor;
+    this.KEY11.BackColor = this.keyDefaultColor;
+    this.KEY12.BackColor = this.keyDefaultColor;
+    this.KEY13.BackColor = this.keyDefaultColor;
+    this.KEY14.BackColor = this.keyDefaultColor;
+    this.KEY15.BackColor = this.keyDefaultColor;
+    this.KEY16.BackColor = this.keyDefaultColor;
+    this.K1_Left.BackColor = this.keyDefaultColor;
+    this.K1_Centre.BackColor = this.keyDefaultColor;
+    this.K1_Right.BackColor = this.keyDefaultColor;
+    this.K2_Left.BackColor = this.keyDefaultColor;
+    this.K2_Centre.BackColor = this.keyDefaultColor;
+    this.K2_Right.BackColor = this.keyDefaultColor;
+    this.K3_Left.BackColor = this.keyDefaultColor;
+    this.K3_Centre.BackColor = this.keyDefaultColor;
+    this.K3_Right.BackColor = this.keyDefaultColor;
   }
 
   private void KEY1_Click(object sender, EventArgs e)
@@ -672,7 +1397,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY1.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY1.BackColor = this.keySelectedColor;
   }
 
   private void KEY2_Click(object sender, EventArgs e)
@@ -683,7 +1408,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY2.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY2.BackColor = this.keySelectedColor;
   }
 
   private void KEY3_Click(object sender, EventArgs e)
@@ -694,7 +1419,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY3.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY3.BackColor = this.keySelectedColor;
   }
 
   private void KEY4_Click(object sender, EventArgs e)
@@ -705,7 +1430,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY4.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY4.BackColor = this.keySelectedColor;
   }
 
   private void KEY5_Click(object sender, EventArgs e)
@@ -716,7 +1441,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY5.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY5.BackColor = this.keySelectedColor;
   }
 
   private void KEY6_Click(object sender, EventArgs e)
@@ -727,7 +1452,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY6.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY6.BackColor = this.keySelectedColor;
   }
 
   private void KEY7_Click(object sender, EventArgs e)
@@ -738,7 +1463,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY7.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY7.BackColor = this.keySelectedColor;
   }
 
   private void KEY8_Click(object sender, EventArgs e)
@@ -749,7 +1474,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY8.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY8.BackColor = this.keySelectedColor;
   }
 
   private void KEY9_Click(object sender, EventArgs e)
@@ -760,7 +1485,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY9.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY9.BackColor = this.keySelectedColor;
   }
 
   private void KEY10_Click(object sender, EventArgs e)
@@ -771,7 +1496,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY10.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY10.BackColor = this.keySelectedColor;
   }
 
   private void KEY11_Click(object sender, EventArgs e)
@@ -782,7 +1507,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY11.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY11.BackColor = this.keySelectedColor;
   }
 
   private void KEY12_Click(object sender, EventArgs e)
@@ -793,7 +1518,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.KEY12.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.KEY12.BackColor = this.keySelectedColor;
   }
 
   private void K1_Left_Click(object sender, EventArgs e)
@@ -804,7 +1529,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.K1_Left.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.K1_Left.BackColor = this.keySelectedColor;
   }
 
   private void K1_Centre_Click(object sender, EventArgs e)
@@ -815,7 +1540,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.K1_Centre.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.K1_Centre.BackColor = this.keySelectedColor;
   }
 
   private void K1_Right_Click(object sender, EventArgs e)
@@ -826,7 +1551,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.K1_Right.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.K1_Right.BackColor = this.keySelectedColor;
   }
 
   private void K2_Left_Click(object sender, EventArgs e)
@@ -837,7 +1562,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.K2_Left.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.K2_Left.BackColor = this.keySelectedColor;
   }
 
   private void K2_Centre_Click(object sender, EventArgs e)
@@ -848,7 +1573,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.K2_Centre.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.K2_Centre.BackColor = this.keySelectedColor;
   }
 
   private void K2_Right_Click(object sender, EventArgs e)
@@ -859,7 +1584,7 @@ public class FormMain : Form
     this.Set_Key_Init();
     this.Clear_Key_Char();
     this.KEY_Colour_Init();
-    this.K2_Right.BackColor = Color.FromArgb((int) byte.MaxValue, 48 /*0x30*/, 48 /*0x30*/);
+    this.K2_Right.BackColor = this.keySelectedColor;
   }
 
   private void FormMain_Load(object sender, EventArgs e)

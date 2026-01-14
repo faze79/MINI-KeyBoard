@@ -60,6 +60,69 @@ internal class HidLib
     report.Data[5] = arrayBuff[5];
     report.Data[6] = arrayBuff[6];
     report.Data[7] = arrayBuff[7];
+
+    // Log the HID write for debugging
+    FormMain.LogHidWrite(id, report.GetBytes(), $"Key={arrayBuff[0]:X2} Type={arrayBuff[1]:X2}");
+
     return this.wDevice.WriteReport(report, 500);
+  }
+
+  // Device info methods
+  public HidDeviceCapabilities GetCapabilities()
+  {
+    return this.wDevice?.Capabilities;
+  }
+
+  public HidDeviceAttributes GetAttributes()
+  {
+    return this.wDevice?.Attributes;
+  }
+
+  public string GetDevicePath()
+  {
+    return this.wDevice?.DevicePath;
+  }
+
+  public string GetProductString()
+  {
+    if (this.wDevice == null) return null;
+    if (this.wDevice.ReadProduct(out byte[] data))
+    {
+      return System.Text.Encoding.Unicode.GetString(data).TrimEnd('\0');
+    }
+    return null;
+  }
+
+  public string GetManufacturerString()
+  {
+    if (this.wDevice == null) return null;
+    if (this.wDevice.ReadManufacturer(out byte[] data))
+    {
+      return System.Text.Encoding.Unicode.GetString(data).TrimEnd('\0');
+    }
+    return null;
+  }
+
+  public string GetSerialNumber()
+  {
+    if (this.wDevice == null) return null;
+    if (this.wDevice.ReadSerialNumber(out byte[] data))
+    {
+      return System.Text.Encoding.Unicode.GetString(data).TrimEnd('\0');
+    }
+    return null;
+  }
+
+  public bool ReadFeatureReport(byte reportId, out byte[] data)
+  {
+    data = null;
+    if (this.wDevice == null) return false;
+    return this.wDevice.ReadFeatureData(out data, reportId);
+  }
+
+  public bool WriteFeatureReport(byte[] data)
+  {
+    if (this.wDevice == null) return false;
+    return this.wDevice.WriteFeatureData(data);
   }
 }

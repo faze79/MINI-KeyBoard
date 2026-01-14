@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MINI KeyBoard", "MINI KeyBoard.csproj", "{D839C0B5-A02E-4CA6-B384-89379343AE23}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HidLibrary", "HidLibrary\HidLibrary.csproj", "{801A1640-E613-4330-B0A7-ADC77D48D29B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{D839C0B5-A02E-4CA6-B384-89379343AE23}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D839C0B5-A02E-4CA6-B384-89379343AE23}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D839C0B5-A02E-4CA6-B384-89379343AE23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{801A1640-E613-4330-B0A7-ADC77D48D29B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{801A1640-E613-4330-B0A7-ADC77D48D29B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{801A1640-E613-4330-B0A7-ADC77D48D29B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{801A1640-E613-4330-B0A7-ADC77D48D29B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

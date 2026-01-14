@@ -171,6 +171,10 @@ public class Hid
         int num = r.reportBuff.Length >= this.outputReportLength - 1 ? this.outputReportLength - 1 : r.reportBuff.Length;
         for (int index = 1; index <= num; ++index)
           buffer[index] = r.reportBuff[index - 1];
+
+        // Log the HID write for debugging
+        HIDTester.FormMain.LogHidWrite(r.reportID, buffer, $"Key={buffer[1]:X2} Type={buffer[2]:X2}");
+
         this.hidDevice.Write(buffer, 0, 65);
         return Hid.HID_RETURN.SUCCESS;
       }

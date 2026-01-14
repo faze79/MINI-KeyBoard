@@ -21,7 +21,27 @@ public class LayerFun : UserControl
   private RadioButton KEY_FunLayer2;
   private RadioButton KEY_FunLayer3;
 
-  public LayerFun() => this.InitializeComponent();
+  // Modern UI Colors
+  private readonly Color textColor = Color.FromArgb(241, 241, 241);
+  private readonly Color panelBackColor = Color.FromArgb(37, 37, 38);
+
+  public LayerFun()
+  {
+    this.InitializeComponent();
+    this.ApplyModernTheme();
+  }
+
+  private void ApplyModernTheme()
+  {
+    this.BackColor = this.panelBackColor;
+    foreach (Control ctrl in this.Controls)
+    {
+      if (ctrl is RadioButton rb)
+      {
+        rb.ForeColor = this.textColor;
+      }
+    }
+  }
 
   private void KEY_FunLayer1_CheckedChanged(object sender, EventArgs e)
   {
